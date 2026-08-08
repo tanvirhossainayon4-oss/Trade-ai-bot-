@@ -27,7 +27,23 @@ export default function Dashboard() {
     const socket = io(WS_URL || undefined, { path: '/socket.io' });
 
     socket.on('connect', () => setIsConnected(true));
-    socket.on('disconnect', () => setIsConnected(false));
+    socket.on('disconnect', (reason, details) => {
+      setIsConnected(false);
+      console.error('WebSocket Disconnected:', {
+        url: "",
+        reason: reason,
+        details: details,
+        state: socket.connected ? 'connected' : 'disconnected'
+      });
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('WebSocket Connection Error:', {
+        url: "",
+        message: error.message,
+        state: socket.connected ? 'connected' : 'disconnected'
+      });
+    });
 
     socket.on('market_data', (data: MarketData[]) => {
       setMarketData(data);
@@ -49,7 +65,15 @@ export default function Dashboard() {
         body: JSON.stringify({ symbol: selectedMarket })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        console.error('API Error:', {
+          url: res.url,
+          status: res.status,
+          body: data,
+          message: data.error || 'API Request Failed'
+        });
+        throw new Error(data.error || 'API Request Failed');
+      }
       setAnalysis(data);
     } catch (e) {
       console.error(e);

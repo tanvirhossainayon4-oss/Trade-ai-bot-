@@ -17,9 +17,22 @@ export default function Markets() {
   }, []);
 
   const fetchMarkets = async () => {
-    const res = await fetch(`${API_URL}/api/v1/markets`);
-    const data = await res.json();
-    setMarkets(data);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/markets`);
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('API Error:', {
+          url: res.url,
+          status: res.status,
+          body: data,
+          message: data.error || 'API Request Failed'
+        });
+        throw new Error(data.error || 'API Request Failed');
+      }
+      setMarkets(data);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const navigateToAnalysis = (symbol: string) => {
