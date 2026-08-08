@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ActivitySquare } from 'lucide-react';
 import { Market } from '../types';
+import { API_URL } from '../config';
 
 export default function Markets() {
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -16,7 +17,7 @@ export default function Markets() {
   }, []);
 
   const fetchMarkets = async () => {
-    const res = await fetch('/api/v1/markets');
+    const res = await fetch(`${API_URL}/api/v1/markets`);
     const data = await res.json();
     setMarkets(data);
   };

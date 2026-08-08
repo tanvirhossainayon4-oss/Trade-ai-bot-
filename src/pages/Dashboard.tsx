@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_URL, WS_URL } from "../config";
 import { io, Socket } from 'socket.io-client';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Activity, TrendingUp, TrendingDown, Clock, Search } from 'lucide-react';
@@ -23,7 +24,7 @@ export default function Dashboard() {
   useEffect(() => {
     // Determine the websocket URL based on current origin since we're proxying
     // In production, we connect to the same host
-    const socket = io('/', { path: '/socket.io' });
+    const socket = io(WS_URL || undefined, { path: '/socket.io' });
 
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
@@ -40,7 +41,7 @@ export default function Dashboard() {
   const runAnalysis = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/analysis/analyze', {
+      const res = await fetch(`${API_URL}/api/v1/analysis/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

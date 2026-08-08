@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { API_URL, WS_URL } from "../config";
 import { useLocation } from 'react-router-dom';
 import { Search, Activity, RefreshCw, Clock, BarChart2, ArrowLeft } from 'lucide-react';
 import { Market, MarketData, MinimalAnalysis as AnalysisType } from '../types';
@@ -52,7 +53,7 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     fetchMarkets();
-    const socket = io('/', { path: '/socket.io' });
+    const socket = io(WS_URL || undefined, { path: '/socket.io' });
 
     socket.on('connect', () => setIsConnected(true));
     socket.on('disconnect', () => setIsConnected(false));
@@ -84,7 +85,7 @@ export default function AnalysisPage() {
   }, [analysis]);
 
   const fetchMarkets = async () => {
-    const res = await fetch('/api/v1/markets');
+    const res = await fetch(`${API_URL}/api/v1/markets`);
     const data = await res.json();
     setMarkets(data);
     
@@ -102,7 +103,7 @@ export default function AnalysisPage() {
   const runAnalysis = async (symbol: string, tf: string) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/analysis/analyze', {
+      const res = await fetch(`${API_URL}/api/v1/analysis/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
