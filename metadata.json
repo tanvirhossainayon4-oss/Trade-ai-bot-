@@ -1,0 +1,8 @@
+{
+  "name": "AI Market Analysis Dashboard",
+  "description": "Professional financial market analysis and education platform with real-time data, technical indicators, and user management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
