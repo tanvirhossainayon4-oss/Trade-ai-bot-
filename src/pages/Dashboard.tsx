@@ -31,6 +31,7 @@ export default function Dashboard() {
     // In production, we connect to the same host
     const socket = io(WS_URL || undefined, { 
       path: '/socket.io', 
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
