@@ -16,7 +16,10 @@ async function startServer() {
   // Database setup
   await setupDatabase();
 
-  app.use(cors());
+  app.use(cors({
+    origin: true,
+    credentials: true
+  }));
   app.use(express.json());
 
   // API Routes
@@ -32,8 +35,9 @@ async function startServer() {
   // Setup Socket.IO for live market data
   const io = new Server(httpServer, {
     cors: {
-      origin: "*",
-      methods: ["GET", "POST"]
+      origin: true,
+      methods: ["GET", "POST"],
+      credentials: true
     }
   });
   

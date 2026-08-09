@@ -46,6 +46,11 @@ export default function AnalysisPage() {
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [timeframe, setTimeframe] = useState('15m');
   
+  const [socketError, setSocketError] = useState<string | null>(null);
+  const [apiStatus, setApiStatus] = useState<string>('Not Started');
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  
   const location = useLocation();
   const analysisContainerRef = useRef<HTMLDivElement>(null);
 
@@ -53,22 +58,39 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     fetchMarkets();
-    const socket = io(WS_URL || undefined, { path: '/socket.io' });
+    const socket = io(WS_URL || undefined, { 
+      path: '/socket.io', 
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5
+    });
 
-    socket.on('connect', () => setIsConnected(true));
+    socket.on('connect', () => {
+      setIsConnected(true);
+      setSocketError(null);
+      if (import.meta.env.DEV) {
+        console.log('Socket connected');
+      }
+    });
+
     socket.on('disconnect', (reason, details) => {
       setIsConnected(false);
-      console.error('WebSocket Disconnected:', {
-        url: "",
-        reason: reason,
-        details: details,
-        state: socket.connected ? 'connected' : 'disconnected'
-      });
+      setSocketError(`Disconnected: ${reason}`);
+      if (reason !== 'io client disconnect') {
+        console.error('WebSocket Disconnected:', {
+          reason: reason,
+          details: details,
+          state: socket.connected ? 'connected' : 'disconnected'
+        });
+      }
     });
 
     socket.on('connect_error', (error) => {
+      setSocketError(error.message);
       console.error('WebSocket Connection Error:', {
-        url: "",
         message: error.message,
         state: socket.connected ? 'connected' : 'disconnected'
       });
@@ -81,6 +103,9 @@ export default function AnalysisPage() {
       });
       setMarketData(dataMap);
       setLastUpdate(new Date());
+      if (import.meta.env.DEV) {
+        console.log(`Markets received: ${data.length}`);
+      }
     });
 
     return () => {
@@ -131,6 +156,8 @@ export default function AnalysisPage() {
 
   const runAnalysis = async (symbol: string, tf: string) => {
     setLoading(true);
+    setApiStatus('Pending');
+    setApiError(null);
     try {
       const res = await fetch(`${API_URL}/api/v1/analysis/analyze`, {
         method: 'POST',
@@ -141,6 +168,8 @@ export default function AnalysisPage() {
       });
       const data = await res.json();
       if (!res.ok) {
+        setApiStatus(`Error: ${res.status}`);
+        setApiError(data.error || 'API Request Failed');
         console.error('API Error:', {
           url: res.url,
           status: res.status,
@@ -149,8 +178,11 @@ export default function AnalysisPage() {
         });
         throw new Error(data.error || 'API Request Failed');
       }
+      setApiStatus(`${res.status} OK`);
       setAnalysis(data);
-    } catch (e) {
+    } catch (e: any) {
+      setApiStatus('Failed');
+      setApiError(e.message || 'Unknown network error');
       console.error(e);
       // Keep previous analysis on error
     } finally {
@@ -165,7 +197,7 @@ export default function AnalysisPage() {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
+    <div className="flex flex-col h-full md:h-[calc(100vh-8rem)] min-h-[600px]">
       {!selectedMarket ? (
         <div className="w-full max-w-5xl mx-auto bg-neutral-900 border border-neutral-800 rounded-xl flex flex-col overflow-hidden h-full">
           <div className="p-6 border-b border-neutral-800 space-y-6">
@@ -387,6 +419,47 @@ export default function AnalysisPage() {
           ) : null}
         </div>
       )}
+      {/* Diagnostics Panel (Collapsible) */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 mt-6 shrink-0">
+        <button 
+          onClick={() => setShowDiagnostics(!showDiagnostics)}
+          className="text-xs font-semibold text-neutral-400 hover:text-white transition-colors flex items-center gap-2"
+        >
+          <Activity className="w-3.5 h-3.5" />
+          {showDiagnostics ? 'Hide' : 'Show'} System Diagnostics
+        </button>
+        
+        {showDiagnostics && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-neutral-800 text-xs font-mono text-neutral-300">
+            <div>
+              <span className="text-neutral-500 block mb-1">Socket URL:</span>
+              <span className="break-all">{WS_URL || '(Same Origin)'}</span>
+            </div>
+            <div>
+              <span className="text-neutral-500 block mb-1">Socket Status:</span>
+              <span className={isConnected ? 'text-emerald-500' : 'text-red-500'}>
+                {isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+              {socketError && <span className="text-red-400 block mt-1">({socketError})</span>}
+            </div>
+            <div>
+              <span className="text-neutral-500 block mb-1">Markets Count:</span>
+              <span>{markets.length} items</span>
+            </div>
+            <div>
+              <span className="text-neutral-500 block mb-1">API URL:</span>
+              <span className="break-all">{API_URL || '(Same Origin)'}</span>
+            </div>
+            <div>
+              <span className="text-neutral-500 block mb-1">Last Analysis API Status:</span>
+              <span className={apiStatus.includes('Error') || apiStatus === 'Failed' ? 'text-red-500' : 'text-indigo-400'}>
+                {apiStatus}
+              </span>
+              {apiError && <span className="text-red-400 block mt-1">({apiError})</span>}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
