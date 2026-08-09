@@ -60,7 +60,6 @@ export default function AnalysisPage() {
     fetchMarkets();
     const socket = io(WS_URL || undefined, { 
       path: '/socket.io', 
-      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
